@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
+    'django_rest_passwordreset',
 
 
 
@@ -147,3 +149,14 @@ REST_FRAMEWORK = {
     ),
 
 }
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_USE_TLS = True
+
+EMAIL_HOST = 'smtp.mail.ru'
+EMAIL_HOST_USER = 'rahmiddin.hasanov@bk.ru'
+EMAIL_HOST_PASSWORD = 'YmciDzfnisCeVvybiakF'
+EMAIL_PORT = '465'
+EMAIL_USE_SSL = True
+SERVER_EMAIL = EMAIL_HOST_USER
