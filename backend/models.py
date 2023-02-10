@@ -5,14 +5,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy
 from django_rest_passwordreset.tokens import get_token_generator
 
-# Create your models here.
 
 USER_TYPE_CHOICES = (
     ('shop', 'Магазин'),
     ('buyer', 'Покупатель'),
 
 )
-
 STATE_CHOICES = (
     ('basket', 'Статус корзины'),
     ('new', 'Новый'),
@@ -60,9 +58,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    """
-    Стандартная модель пользователей
-    """
+    """Standard user model"""
     REQUIRED_FIELDS = []
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -116,9 +112,8 @@ class Shop(models.Model):
 
 
 class Category(models.Model):
-
     name = models.CharField(max_length=50, verbose_name='Категория')
-    shop = models.ManyToManyField(Shop, verbose_name='Магазины', related_name='categories', blank=True)
+    shops = models.ManyToManyField(Shop, verbose_name='Магазины', related_name='categorie', blank=True)
 
     class Meta:
         verbose_name = 'Категория'
@@ -131,6 +126,8 @@ class Category(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=80, verbose_name='Название')
+    category = models.ForeignKey(Category, verbose_name='Категория', related_name='products', blank=True,
+                                 on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Продукт'
@@ -144,9 +141,9 @@ class Product(models.Model):
 class ProductInfo(models.Model):
     model = models.CharField(max_length=80, verbose_name='Модель', blank=True)
     external_id = models.PositiveIntegerField(verbose_name='Внешний ИД')
-    product = models.ForeignKey(Product, verbose_name='Продукт', related_name='product_infos', blank=True,
+    product = models.ForeignKey(Product, verbose_name='Продукт', related_name='product_info', blank=True,
                                 on_delete=models.CASCADE)
-    shop = models.ForeignKey(Shop, verbose_name='Магазин', related_name='product_infos', blank=True,
+    shop = models.ForeignKey(Shop, verbose_name='Магазин', related_name='product_info', blank=True,
                              on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(verbose_name='Количество')
     price = models.PositiveIntegerField(verbose_name='Цена')
@@ -155,9 +152,9 @@ class ProductInfo(models.Model):
     class Meta:
         verbose_name = 'Информация о продукте'
         verbose_name_plural = "Информационный список о продуктах"
-        constraints = [
-            models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
+        # ]
 
 
 class Parameter(models.Model):
@@ -249,7 +246,6 @@ class ConfirmEmailToken(models.Model):
 
     @staticmethod
     def generate_key():
-        """ generates a pseudo random code using os.urandom and binascii.hexlify """
         return get_token_generator().generate_token()
 
     user = models.ForeignKey(
@@ -264,7 +260,6 @@ class ConfirmEmailToken(models.Model):
         verbose_name=gettext_lazy("When was this token generated")
     )
 
-    # Key field, though it is not the primary key of the model
     key = models.CharField(
         gettext_lazy("Key"),
         max_length=64,

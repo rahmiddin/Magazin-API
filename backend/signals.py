@@ -1,8 +1,6 @@
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.dispatch import receiver, Signal
-from django_rest_passwordreset.signals import reset_password_token_created
-
 from backend.models import ConfirmEmailToken, User
 
 new_user_registered = Signal(
@@ -11,10 +9,8 @@ new_user_registered = Signal(
 
 
 @receiver(new_user_registered)
-def new_user_registered_signal(user_id, **kwargs):
-    """
-    отправляем письмо с подтрердждением почты
-    """
+def new_user_registered_signal(user_id: int, **kwargs):
+    """Send email confirmation"""
     # send an e-mail to the user
     token, _ = ConfirmEmailToken.objects.get_or_create(user_id=user_id)
 
