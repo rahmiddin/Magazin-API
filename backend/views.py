@@ -5,18 +5,21 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .seralizers import UserSerializer, OrderSerializer, OrderItemSerializer, ProductInfoSerializer
+from .seralizers import UserSerializer, OrderSerializer, OrderItemSerializer, ProductInfoSerializer, \
+    CategorySerializer, ShopSerializer
 from .models import User, ConfirmEmailToken, Category, Shop, Product, ProductInfo, ProductParameter, Parameter, \
     Order, OrderItem
 from backend.signals import new_user_registered
 from rest_framework.authtoken.models import Token
 import yaml
 from ujson import loads, load
+# from json import loads
 
 
 class RegisterAccount(APIView):
@@ -124,34 +127,28 @@ class PartnerUpdate(APIView):
             return JsonResponse({'Status': True})
 
 
+class CategoryView(ListAPIView):
+    """To get categories"""
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class ShopView(ListAPIView):
+    """To get a shop"""
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
+
+
+
 class BasketView(APIView):
-    """Class for working with the user's shopping cart """
+    """
+    Класс для работы с корзиной пользователя
+    """
 
-    def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-        item = request.data.get('item')
-        print(item)
-        if {'item', 'quantity'}.issubset(request.data):
-            try:
-                product = Product.objects.get(name=item).id
-            except ObjectDoesNotExist:
-                return JsonResponse({'Status': False, 'Error': 'Такой товар не сушествует'}, status=403)
-            else:
-                product_info = ProductInfo.objects.get(product_id=product)
-                order, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
-                item_create, _ = OrderItem.objects.get_or_create(order_id=order.id, id=product,
-                                                                 product_info=product_info,
-                                                                 quantity=request.data['quantity'])
-                return JsonResponse({'Status': True})
-        else:
-            return JsonResponse({'Status': False, 'Error': 'Не указаны все необходимые аргументы'}, status=403)
-
+    # получить корзину
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
         basket = Order.objects.filter(
             user_id=request.user.id, state='basket').prefetch_related(
             'ordered_items__product_info__product__category',
@@ -161,24 +158,106 @@ class BasketView(APIView):
         serializer = OrderSerializer(basket, many=True)
         return Response(serializer.data)
 
+    # редактировать корзину
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        items_sting = request.data.get('items')
+        if items_sting:
+            try:
+                items_dict = loads(items_sting)
+            except ValueError:
+                JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
+            else:
+                basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+                objects_created = 0
+                for order_item in items_dict:
+                    product_info = ProductInfo.objects.get(external_id=order_item['id']).id
+                    order_item.update({'order': basket.id, 'product_info': product_info})
+                    serializer = OrderItemSerializer(data=order_item)
+                    if serializer.is_valid():
+                        try:
+                            serializer.save()
+                        except IntegrityError as error:
+                            return JsonResponse({'Status': False, 'Errors1': str(error)})
+                        else:
+                            objects_created += 1
+
+                    else:
+
+                        JsonResponse({'Status': False, 'Errors': serializer.errors})
+
+                return JsonResponse({'Status': True, 'Создано объектов': objects_created})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+    # удалить товары из корзины
+    def delete(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        items_sting = request.data.get('items')
+        if items_sting:
+            items_list = items_sting.split(',')
+            basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+            query = Q()
+            objects_deleted = False
+            for order_item_id in items_list:
+                print(order_item_id)
+                if order_item_id.isdigit():
+                    query = query | Q(order_id=basket.id, id=order_item_id)
+                    objects_deleted = True
+
+            if objects_deleted:
+                deleted_count = OrderItem.objects.filter(query).delete()[0]
+                return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+    # добавить позиции в корзину
     def put(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        item = request.data.get('item')
-
-        if item:
+        items_sting = request.data.get('items')
+        if items_sting:
             try:
-                item_dict = loads(item)
+                items_dict = loads(items_sting)
             except ValueError:
-                JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
+                return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
             else:
-                order, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
-                item_update = 0
-                for product in item_dict:
-                    if type(product['id']) == int and type(product['quantity']) == int:
-                        item_update += OrderItem.objects.filter(order_id=order.id, id=product['id']).update(
-                                                                        quantity=product['quantity'])
-                    return JsonResponse({'Status': True, 'Обновлено объектов': item_update})
-
+                basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+                objects_updated = 0
+                for order_item in items_dict:
+                    print(order_item)
+                    if type(order_item['id']) == int and type(order_item['quantity']) == int:
+                        obj = OrderItem.objects.filter(order_id=basket.id, id=order_item['id'])
+                        print(obj)
+                        objects_updated += OrderItem.objects.filter(order_id=basket.id, id=order_item['id']).update(
+                            quantity=order_item['quantity'])
+                        print(objects_updated)
+                return JsonResponse({'Status': True, 'Обновлено объектов': objects_updated})
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+
+class ProductInfoView(APIView):
+    """A class for searching for products"""
+    def get(self, request, *args, **kwargs):
+
+        query = Q(shop__state=True)
+        shop_id = request.query_params.get('shop_id')
+        category_id = request.query_params.get('category_id')
+
+        if shop_id:
+            query = query & Q(shop_id=shop_id)
+
+        if category_id:
+            query = query & Q(product__category_id=category_id)
+
+        queryset = ProductInfo.objects.filter(
+            query).select_related(
+            'shop', 'product__category').prefetch_related(
+            'product_parameters__parameter').distinct()
+
+        serializer = ProductInfoSerializer(queryset, many=True)
+
+        return Response(serializer.data)

@@ -65,10 +65,11 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ('id', 'quantity')
+        fields = ('id', 'quantity', 'order', 'product_info')
         read_only_fields = ('id',)
         extra_kwargs = {
-            'order': {'write_only': True}
+            'order': {'write_only': True},
+            'product_info': {'write_only': True}
         }
 
 
