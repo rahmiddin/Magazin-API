@@ -7,6 +7,10 @@ new_user_registered = Signal(
     'user_id',
 )
 
+new_order = Signal(
+    'user_id',
+)
+
 
 @receiver(new_user_registered)
 def new_user_registered_signal(user_id: int, **kwargs):
@@ -25,4 +29,23 @@ def new_user_registered_signal(user_id: int, **kwargs):
         [token.user.email]
     )
 
+    msg.send()
+
+
+@receiver(new_order)
+def new_order_signal(user_id, **kwargs):
+    """we send an email when the order status changes"""
+    # send an e-mail to the user
+    user = User.objects.get(id=user_id)
+
+    msg = EmailMultiAlternatives(
+        # title:
+        f"Обновление статуса заказа",
+        # message:
+        'Заказ сформирован',
+        # from:
+        settings.EMAIL_HOST_USER,
+        # to:
+        [user.email]
+    )
     msg.send()
