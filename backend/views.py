@@ -438,7 +438,6 @@ class OrderStatusView(APIView):
                         contact_id=request.data['contact'],
                         state='new')
                 except IntegrityError as error:
-                    print(error)
                     return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
                 else:
                     if is_updated:
