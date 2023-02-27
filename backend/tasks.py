@@ -1,19 +1,12 @@
-from django.conf import settings
+from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
-from django.dispatch import receiver, Signal
-from backend.models import ConfirmEmailToken, User
-
-new_user_registered = Signal(
-    'user_id',
-)
-
-new_order = Signal(
-    'user_id',
-)
+from .models import ConfirmEmailToken
+from django.conf import settings
+from .models import User
 
 
-@receiver(new_user_registered)
-def new_user_registered_signal(user_id: int, **kwargs):
+@shared_task()
+def new_user_registered(user_id: int):
     """Send email confirmation"""
     # send an e-mail to the user
     token, _ = ConfirmEmailToken.objects.get_or_create(user_id=user_id)
@@ -32,8 +25,8 @@ def new_user_registered_signal(user_id: int, **kwargs):
     msg.send()
 
 
-@receiver(new_order)
-def new_order_signal(user_id, **kwargs):
+@shared_task()
+def new_order(user_id: int):
     """we send an email when the order status changes"""
     # send an e-mail to the user
     user = User.objects.get(id=user_id)

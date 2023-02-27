@@ -1,10 +1,7 @@
-import os
 from distutils.util import strtobool
 
-from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.db.models import Sum, F, Q
@@ -17,10 +14,10 @@ from .seralizers import UserSerializer, OrderSerializer, OrderItemSerializer, Pr
     CategorySerializer, ShopSerializer, ContactSerializer
 from .models import User, ConfirmEmailToken, Category, Shop, Product, ProductInfo, ProductParameter, Parameter, \
     Order, OrderItem, Contact
-from backend.signals import new_user_registered, new_order
+from .tasks import new_user_registered, new_order
 from rest_framework.authtoken.models import Token
 import yaml
-from ujson import loads, load
+from ujson import loads
 # from json import loads
 
 
@@ -43,7 +40,7 @@ class RegisterAccount(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.save()
-                    new_user_registered.send(sender=self.__class__, user_id=user.id)
+                    new_user_registered.delay(user_id=user.id)
                     return JsonResponse({'status': True})
                 else:
                     return JsonResponse({'status': False, 'Errors': user_serializer.errors})
@@ -441,7 +438,7 @@ class OrderStatusView(APIView):
                     return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
                 else:
                     if is_updated:
-                        new_order.send(sender=self.__class__, user_id=request.user.id)
+                        new_order.delay(user_id=request.user.id)
                         return JsonResponse({'Status': True})
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
