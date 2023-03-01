@@ -8,7 +8,7 @@ router = DefaultRouter()
 router.register(r'detail', AccountDetailsView, basename='user-details')
 
 urlpatterns = [
-    path('user', include(router.urls)),
+    path('user/', include(router.urls)),
     path('user/register', RegisterAccount.as_view(), name='user_register'),
     path('user/login', LoginAccount.as_view(), name='user_login'),
     path('user/register/confirm', ConfirmAccount.as_view(), name='user-register-confirm'),

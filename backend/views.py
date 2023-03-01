@@ -90,6 +90,7 @@ class LoginAccount(APIView):
 
 class AccountDetailsView(viewsets.ModelViewSet):
     queryset = User.objects.all()
+    serializer_class = UserSerializer
     permission_classes = (IsAuthenticated, )
 
     def partial_update(self, request, *args, **kwargs):
