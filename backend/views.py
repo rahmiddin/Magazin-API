@@ -18,6 +18,8 @@ from .tasks import new_user_registered, new_order
 from rest_framework.authtoken.models import Token
 import yaml
 from ujson import loads
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 # from json import loads
 
 
@@ -86,19 +88,11 @@ class LoginAccount(APIView):
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
 
-class AccountDetails(APIView):
-    """A class for working with user data"""
+class AccountDetailsView(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    permission_classes = (IsAuthenticated, )
 
-    def get(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
-
-    def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+    def partial_update(self, request, *args, **kwargs):
 
         if 'password' in request.data:
             errors = {}
