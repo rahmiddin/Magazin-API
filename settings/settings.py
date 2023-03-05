@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_yasg',
 
-
     'backend',
 ]
 
@@ -146,10 +145,17 @@ REST_FRAMEWORK = {
     ),
 
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'rest_framework.authentication.SessionAuthentication',
-        # 'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
+
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day'
+    },
 
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 
@@ -164,8 +170,6 @@ SPECTACULAR_SETTINGS = {
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_USE_TLS = True
-
 EMAIL_HOST = 'smtp.mail.ru'
 EMAIL_HOST_USER = 'rahmiddin.hasanov@bk.ru'
 EMAIL_HOST_PASSWORD = 'YmciDzfnisCeVvybiakF'

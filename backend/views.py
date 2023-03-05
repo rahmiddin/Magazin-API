@@ -178,7 +178,7 @@ class BasketView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, ]
 
     def list(self, request, *args, **kwargs):
-        """Get cart"""
+        """get cart"""
         basket = Order.objects.filter(
             user_id=request.user.id, state='basket').prefetch_related(
             'ordered_items__product_info__product__category',
