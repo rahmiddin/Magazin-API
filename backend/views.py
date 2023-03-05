@@ -20,12 +20,14 @@ import yaml
 from ujson import loads
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from drf_yasg.utils import swagger_auto_schema
 # from json import loads
 
 
 class RegisterAccount(APIView):
     """ Class for user registration"""
 
+    @swagger_auto_schema(request_body=UserSerializer)
     def post(self, request, *args, **kwargs):
 
         if {'email', 'password', 'type', 'last_name', 'first_name'}.issubset(request.data):
@@ -51,8 +53,7 @@ class RegisterAccount(APIView):
 
 class ConfirmAccount(APIView):
     """Account verification class"""
-
-    def post(self, request, *args, **kwargs) -> JsonResponse:
+    def post(self, request, *args, **kwargs):
 
         if {'email', 'token'}.issubset(request.data):
 
@@ -73,11 +74,12 @@ class LoginAccount(APIView):
     """Class for user authorization"""
 
     def post(self, request, *args, **kwargs):
-
         if {'email', 'password'}.issubset(request.data):
+
             user = authenticate(request, username=request.data['email'], password=request.data['password'])
 
             if user is not None:
+
                 if user.is_active:
                     token, _ = Token.objects.get_or_create(user=user)
 
@@ -89,12 +91,14 @@ class LoginAccount(APIView):
 
 
 class AccountDetailsView(viewsets.ModelViewSet):
+    """Class for getting account information"""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticated, )
 
     def partial_update(self, request, *args, **kwargs):
-
+        """Update account information"""
         if 'password' in request.data:
             errors = {}
             try:
@@ -168,15 +172,13 @@ class ShopView(ListAPIView):
     serializer_class = ShopSerializer
 
 
-class BasketView(APIView):
-    """
-    Класс для работы с корзиной пользователя
-    """
+class BasketView(viewsets.ModelViewSet):
+    queryset = Order.objects.all().filter(state='basket')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated, ]
 
-    # получить корзину
-    def get(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+    def list(self, request, *args, **kwargs):
+        """Get cart"""
         basket = Order.objects.filter(
             user_id=request.user.id, state='basket').prefetch_related(
             'ordered_items__product_info__product__category',
@@ -186,11 +188,8 @@ class BasketView(APIView):
         serializer = OrderSerializer(basket, many=True)
         return Response(serializer.data)
 
-    # редактировать корзину
-    def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
+    def create(self, request, *args, **kwargs):
+        """Edit cart"""
         items_sting = request.data.get('items')
         if items_sting:
             try:
@@ -208,7 +207,7 @@ class BasketView(APIView):
                         try:
                             serializer.save()
                         except IntegrityError as error:
-                            return JsonResponse({'Status': False, 'Errors1': str(error)})
+                            return JsonResponse({'Status': False, 'Errors': str(error)})
                         else:
                             objects_created += 1
 
@@ -219,11 +218,8 @@ class BasketView(APIView):
                 return JsonResponse({'Status': True, 'Создано объектов': objects_created})
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
-    # удалить товары из корзины
-    def delete(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
+    def destroy(self, request, *args, **kwargs):
+        """Remove items from cart"""
         items_sting = request.data.get('items')
         if items_sting:
             items_list = items_sting.split(',')
@@ -240,11 +236,8 @@ class BasketView(APIView):
                 return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
-    # добавить позиции в корзину
-    def put(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
+    def update(self, request, *args, **kwargs):
+        """Add items to cart"""
         items_sting = request.data.get('items')
         if items_sting:
             try:

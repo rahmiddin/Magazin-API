@@ -43,10 +43,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_rest_passwordreset',
+    'drf_spectacular',
+    'drf_yasg',
 
 
-
-    'backend'
+    'backend',
 ]
 
 MIDDLEWARE = [
@@ -150,6 +151,15 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
 
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API',
+    'DESCRIPTION': 'SOME DESCRIPTION',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False
 }
 
 

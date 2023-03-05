@@ -5,10 +5,11 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 
-router.register(r'detail', AccountDetailsView, basename='user-details')
+router.register(r'user/detail', AccountDetailsView, basename='user-details')
+router.register('basket', BasketView, basename='basket')
 
 urlpatterns = [
-    path('user/', include(router.urls)),
+    path('', include(router.urls)),
     path('user/register', RegisterAccount.as_view(), name='user_register'),
     path('user/login', LoginAccount.as_view(), name='user_login'),
     path('user/register/confirm', ConfirmAccount.as_view(), name='user-register-confirm'),
@@ -16,10 +17,9 @@ urlpatterns = [
     path('partner/state', ShopStatusView.as_view(), name='partner-state'),
     path('user/contacts', ContactView.as_view(), name='contacts'),
     path('partner/order', PartnerOrderView.as_view(), name='order'),
-    path('basket', BasketView.as_view(), name='basket'),
+    # path('basket', BasketView.as_view(), name='basket'),
     path('category', CategoryView.as_view(), name='category'),
     path('shop', ShopView.as_view(), name='shop'),
     path('products', ProductInfoView.as_view(), name='shops'),
     path('order', OrderStatusView.as_view(), name='order'),
-
 ]
